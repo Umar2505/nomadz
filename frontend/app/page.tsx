@@ -1,103 +1,271 @@
-import Image from "next/image";
+"use client";
+
+import Link from "next/link";
+import { useState } from "react";
+
+type Message = {
+  id: string;
+  role: "user" | "assistant";
+  name: string;
+  text: string;
+  timestamp: string;
+};
+
+type HistoryItem = {
+  id: string;
+  title: string;
+  preview: string;
+  updatedAt: string;
+};
+
+const DEFAULT_MESSAGES: Message[] = [
+  {
+    id: "welcome",
+    role: "assistant",
+    name: "Nomadz AI",
+    text: "Hey traveler! I&apos;m here to design flexible remote-work adventures tailored to your vibe. Where do you want to explore next?",
+    timestamp: "09:00",
+  },
+];
+
+const PREVIOUS_CHATS: HistoryItem[] = [
+  {
+    id: "tokyo-itinerary",
+    title: "Tokyo coworking sprint",
+    preview: "7-day blend of neon nights and Zen mornings",
+    updatedAt: "Nov 21",
+  },
+  {
+    id: "lisbon-waves",
+    title: "Lisbon surf & workweek",
+    preview: "Cowork-friendly cafés near praia do Guincho",
+    updatedAt: "Nov 18",
+  },
+  {
+    id: "seoul-seasonal",
+    title: "Seoul seasonal eats",
+    preview: "Street food crawl with late-night work hubs",
+    updatedAt: "Nov 12",
+  },
+];
+
+const timeFormatter = new Intl.DateTimeFormat([], {
+  hour: "numeric",
+  minute: "2-digit",
+});
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [messages, setMessages] = useState<Message[]>(() =>
+    DEFAULT_MESSAGES.map((message) => ({ ...message }))
+  );
+  const [inputValue, setInputValue] = useState("");
+  const [showIntro, setShowIntro] = useState(true);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const handleSend = (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
+
+    const trimmed = inputValue.trim();
+
+    if (!trimmed) {
+      return;
+    }
+
+    const now = new Date();
+    const userMessage: Message = {
+      id: `user-${now.getTime()}`,
+      role: "user",
+      name: "You",
+      text: trimmed,
+      timestamp: timeFormatter.format(now),
+    };
+
+    const assistantMessage: Message = {
+      id: `assistant-${now.getTime() + 1}`,
+      role: "assistant",
+      name: "Nomadz AI",
+      text: `Noted! I&apos;ll craft a travel flow around "${trimmed}" once the live intelligence is connected.`,
+      timestamp: timeFormatter.format(new Date(now.getTime() + 2 * 60 * 1000)),
+    };
+
+    setMessages((current) => [...current, userMessage, assistantMessage]);
+    setInputValue("");
+    setShowIntro(false);
+  };
+
+  const handleNewChat = () => {
+    setMessages(DEFAULT_MESSAGES.map((message) => ({ ...message })));
+    setInputValue("");
+    setShowIntro(true);
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-900 text-slate-100">
+      <div className="flex min-h-screen flex-col bg-black/20 backdrop-blur-xl">
+        <header className="border-b border-white/10 bg-black/40">
+          <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
+            <div className="flex items-center gap-4">
+              <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-tr from-indigo-500 to-purple-400 text-lg font-semibold text-white shadow-lg">
+                N
+              </span>
+              <div>
+                <p className="text-lg font-semibold leading-tight">Nomadz Compass</p>
+                <p className="text-xs text-white/60">
+                  Plan remote work adventures with an AI travel copilot.
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/sign-in"
+              className="rounded-full bg-white/10 px-5 py-2.5 text-sm font-medium text-white shadow-lg transition hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            >
+              Sign in
+            </Link>
+          </div>
+        </header>
+
+        <div className="flex flex-1 overflow-hidden">
+          <aside className="hidden w-72 flex-col border-r border-white/10 bg-white/5 px-6 py-8 backdrop-blur-2xl lg:flex">
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.3em] text-white/70">
+                Recent chats
+              </h2>
+              <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_12px_2px_rgba(52,211,153,0.6)]" />
+            </div>
+            <nav className="flex-1 space-y-3 overflow-y-auto pr-2">
+              {PREVIOUS_CHATS.map((chat) => (
+                <button
+                  key={chat.id}
+                  type="button"
+                  className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-4 text-left transition hover:border-white/30 hover:bg-white/10"
+                >
+                  <p className="text-sm font-semibold text-white">
+                    {chat.title}
+                  </p>
+                  <p className="mt-1 text-xs text-white/60">{chat.preview}</p>
+                  <p className="mt-3 text-[11px] uppercase tracking-[0.2em] text-white/40">
+                    Updated {chat.updatedAt}
+                  </p>
+                </button>
+              ))}
+            </nav>
+          </aside>
+
+          <main className="flex flex-1 flex-col overflow-hidden">
+            <div className="mx-auto flex h-full w-full max-w-4xl flex-col gap-8 px-6 py-10">
+              <section className="min-h-[64px]">
+                {showIntro ? (
+                  <p className="max-w-2xl text-sm text-white/80">
+                    Nomadz Compass transforms scattered travel research into a single actionable plan so you can land, plug in, and start living like a local from day one.
+                  </p>
+                ) : (
+                  <div className="flex items-center gap-3 rounded-3xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/70 shadow-lg">
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-indigo-500 to-sky-400 text-xs font-semibold uppercase text-white">
+                      Beta
+                    </span>
+                    Responses from the Nomadz intelligence engine will stream here when connected.
+                  </div>
+                )}
+              </section>
+
+              <section className="flex flex-1 flex-col overflow-hidden rounded-3xl border border-white/10 bg-black/40 shadow-2xl">
+                <div className="flex items-center justify-between border-b border-white/10 px-6 py-5">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/60">
+                      Live conversation
+                    </p>
+                    <p className="mt-1 text-sm text-white/70">
+                      You&apos;re chatting with Nomadz AI.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex-1 space-y-4 overflow-y-auto px-6 py-6">
+                  {messages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={`flex ${
+                        message.role === "user" ? "justify-end" : "justify-start"
+                      }`}
+                    >
+                      <div
+                        className={`max-w-[75%] rounded-3xl px-5 py-4 text-sm leading-6 shadow-xl backdrop-blur ${
+                          message.role === "user"
+                            ? "bg-gradient-to-br from-indigo-500 to-purple-500 text-white"
+                            : "bg-white/10 text-white/90"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.2em] text-white/60">
+                          <span>{message.name}</span>
+                          <span>{message.timestamp}</span>
+                        </div>
+                        <p className="mt-3 whitespace-pre-line text-sm text-white/90">
+                          {message.text}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <form
+                  onSubmit={handleSend}
+                  className="border-t border-white/10 bg-black/60 px-6 py-5"
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <button
+                      type="button"
+                      onClick={handleNewChat}
+                      className="flex h-12 w-full items-center justify-center rounded-2xl border border-dashed border-white/20 bg-transparent text-sm font-medium text-white/80 transition hover:border-white/50 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:w-12"
+                    >
+                      <svg
+                        aria-hidden="true"
+                        className="h-5 w-5"
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M10 4v12M4 10h12"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      <span className="sr-only">Start a new chat</span>
+                    </button>
+                    <div className="flex flex-1 items-center gap-3 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 transition focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-500/50">
+                      <input
+                        value={inputValue}
+                        onChange={(event) => setInputValue(event.target.value)}
+                        placeholder="Ask Nomadz AI anything about your next remote work trip..."
+                        className="flex-1 bg-transparent text-sm text-white placeholder:text-white/50 focus:outline-none"
+                        aria-label="Type your message"
+                      />
+                      <button
+                        type="submit"
+                        className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-tr from-sky-500 to-indigo-500 text-white shadow-lg transition hover:from-sky-400 hover:to-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                        aria-label="Send message"
+                      >
+                        <svg
+                          aria-hidden="true"
+                          className="h-4 w-4"
+                          viewBox="0 0 20 20"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M3.227 9.38 15.06 3.575c.87-.43 1.786.486 1.357 1.357L10.61 16.764c-.448.907-1.804.81-2.065-.146l-1.225-4.446a.5.5 0 0 0-.347-.347L2.527 10.6c-.956-.26-1.054-1.617-.147-2.065z"
+                            fill="currentColor"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              </section>
+            </div>
+          </main>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </div>
     </div>
   );
 }
