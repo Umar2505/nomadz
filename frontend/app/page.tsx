@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useState } from "react";
@@ -38,7 +38,7 @@ const PREVIOUS_CHATS: HistoryItem[] = [
   {
     id: "lisbon-waves",
     title: "Lisbon surf & workweek",
-    preview: "Cowork-friendly cafés near praia do Guincho",
+    preview: "Cowork-friendly cafÃ©s near praia do Guincho",
     updatedAt: "Nov 18",
   },
   {
@@ -54,19 +54,43 @@ const timeFormatter = new Intl.DateTimeFormat([], {
   minute: "2-digit",
 });
 
+const FALLBACK_ASSISTANT_RESPONSE =
+  "Nomadz AI connected but didn&apos;t return any details. Try asking again.";
+
+function extractAssistantText(payload: unknown): string {
+  if (payload && typeof payload === "object") {
+    const { output, response, message } = payload as {
+      output?: unknown;
+      response?: unknown;
+      message?: unknown;
+    };
+
+    const candidates = [output, response, message];
+
+    for (const candidate of candidates) {
+      if (typeof candidate === "string" && candidate.trim().length > 0) {
+        return candidate;
+      }
+    }
+  }
+
+  return FALLBACK_ASSISTANT_RESPONSE;
+}
+
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>(() =>
     DEFAULT_MESSAGES.map((message) => ({ ...message }))
   );
   const [inputValue, setInputValue] = useState("");
   const [showIntro, setShowIntro] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSend = (event?: React.FormEvent<HTMLFormElement>) => {
+  const handleSend = async (event?: React.FormEvent<HTMLFormElement>) => {
     event?.preventDefault();
 
     const trimmed = inputValue.trim();
 
-    if (!trimmed) {
+    if (!trimmed || isLoading) {
       return;
     }
 
@@ -79,20 +103,89 @@ export default function Home() {
       timestamp: timeFormatter.format(now),
     };
 
+    const assistantMessageId = `assistant-${now.getTime() + 1}`;
     const assistantMessage: Message = {
-      id: `assistant-${now.getTime() + 1}`,
+      id: assistantMessageId,
       role: "assistant",
       name: "Nomadz AI",
-      text: `Noted! I&apos;ll craft a travel flow around "${trimmed}" once the live intelligence is connected.`,
-      timestamp: timeFormatter.format(new Date(now.getTime() + 2 * 60 * 1000)),
+      text: "Nomadz AI is mapping your remote-work adventure...",
+      timestamp: timeFormatter.format(now),
     };
 
     setMessages((current) => [...current, userMessage, assistantMessage]);
     setInputValue("");
     setShowIntro(false);
+    setIsLoading(true);
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ query: trimmed }),
+      });
+
+      let payload: unknown = null;
+
+      try {
+        payload = await response.json();
+      } catch {
+        payload = null;
+      }
+
+      if (!response.ok) {
+        const errorMessage =
+          payload &&
+          typeof payload === "object" &&
+          "error" in payload &&
+          typeof (payload as { error?: unknown }).error === "string"
+            ? (payload as { error: string }).error
+            : "The Nomadz API returned an unexpected error.";
+
+        throw new Error(errorMessage);
+      }
+
+      const assistantText = extractAssistantText(payload);
+
+      setMessages((current) =>
+        current.map((message) =>
+          message.id === assistantMessageId
+            ? {
+                ...message,
+                text: assistantText,
+                timestamp: timeFormatter.format(new Date()),
+              }
+            : message,
+        ),
+      );
+    } catch (error) {
+      const fallbackError =
+        error instanceof Error
+          ? error.message
+          : "Nomadz AI encountered an unexpected issue.";
+
+      setMessages((current) =>
+        current.map((message) =>
+          message.id === assistantMessageId
+            ? {
+                ...message,
+                text: `Nomadz AI ran into an issue: ${fallbackError}`,
+                timestamp: timeFormatter.format(new Date()),
+              }
+            : message,
+        ),
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleNewChat = () => {
+    if (isLoading) {
+      return;
+    }
+
     setMessages(DEFAULT_MESSAGES.map((message) => ({ ...message })));
     setInputValue("");
     setShowIntro(true);
@@ -162,7 +255,7 @@ export default function Home() {
                     <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-indigo-500 to-sky-400 text-xs font-semibold uppercase text-white">
                       Beta
                     </span>
-                    Responses from the Nomadz intelligence engine will stream here when connected.
+                    Responses are streaming directly from the Nomadz intelligence engine via the connected API.
                   </div>
                 )}
               </section>
@@ -214,7 +307,8 @@ export default function Home() {
                     <button
                       type="button"
                       onClick={handleNewChat}
-                      className="flex h-12 w-full items-center justify-center rounded-2xl border border-dashed border-white/20 bg-transparent text-sm font-medium text-white/80 transition hover:border-white/50 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:w-12"
+                      disabled={isLoading}
+                      className="flex h-12 w-full items-center justify-center rounded-2xl border border-dashed border-white/20 bg-transparent text-sm font-medium text-white/80 transition hover:border-white/50 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-60 sm:w-12"
                     >
                       <svg
                         aria-hidden="true"
@@ -242,7 +336,8 @@ export default function Home() {
                       />
                       <button
                         type="submit"
-                        className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-tr from-sky-500 to-indigo-500 text-white shadow-lg transition hover:from-sky-400 hover:to-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                        disabled={isLoading}
+                        className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-tr from-sky-500 to-indigo-500 text-white shadow-lg transition hover:from-sky-400 hover:to-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-60"
                         aria-label="Send message"
                       >
                         <svg
@@ -269,3 +364,4 @@ export default function Home() {
     </div>
   );
 }
+
