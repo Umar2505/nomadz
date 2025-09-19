@@ -6,7 +6,7 @@ from flask import Flask, request, jsonify
 # Initialize the Flask application
 app = Flask(__name__)
 
-@app.route('/upload-csv', methods=['POST'])
+@app.route('/api', methods=['POST'])
 def upload_csv():
     # This function block is indented with 4 spaces
     # You can uncomment the print statement below for debugging if needed
@@ -43,6 +43,12 @@ def upload_csv():
 
     except Exception as e:
         return jsonify({"error": f"An error occurred: {str(e)}"}), 500
+
+@app.route('/api/test', methods=['POST'])
+def test_api():
+    return jsonify({"output": "this is the answer to your query"}), 200
+ 
+
 
 # Run the server
 if __name__ == '__main__':
