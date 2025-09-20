@@ -27,6 +27,7 @@ type Message = {
   text: string;
   timestamp: string;
   createdAt: string;
+  violations?: string[];
 };
 
 type HistoryItem = {
@@ -70,6 +71,38 @@ function extractAssistantText(payload: unknown): string {
   return FALLBACK_ASSISTANT_RESPONSE;
 }
 
+function sanitizeViolations(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const entries = value as unknown[];
+
+  const sanitizedViolations = entries
+    .map((entry) => (typeof entry === "string" ? entry.trim() : null))
+    .filter((entry): entry is string => entry !== null && entry.length > 0);
+
+  if (sanitizedViolations.length > 0) {
+    return sanitizedViolations;
+  }
+
+  if (entries.length === 0 || entries.every((entry) => typeof entry === "string")) {
+    return [];
+  }
+
+  return undefined;
+}
+
+function extractViolations(payload: unknown): string[] | undefined {
+  if (!payload || typeof payload !== "object") {
+    return undefined;
+  }
+
+  const { violations } = payload as { violations?: unknown };
+
+  return sanitizeViolations(violations);
+}
+
 function createDefaultMessages(): Message[] {
   const now = new Date();
 
@@ -96,10 +129,12 @@ function parseMessages(data: unknown): Message[] {
         return null;
       }
 
-      const { id, role, name, text, timestamp, createdAt } = entry as Partial<Message> & {
-        createdAt?: unknown;
-        timestamp?: unknown;
-      };
+      const { id, role, name, text, timestamp, createdAt, violations } =
+        entry as Partial<Message> & {
+          createdAt?: unknown;
+          timestamp?: unknown;
+          violations?: unknown;
+        };
 
       if (
         typeof id !== "string" ||
@@ -119,6 +154,8 @@ function parseMessages(data: unknown): Message[] {
           ? timestamp
           : timeFormatter.format(new Date(createdAtIso));
 
+      const parsedViolations = sanitizeViolations(violations);
+
       return {
         id,
         role,
@@ -126,6 +163,9 @@ function parseMessages(data: unknown): Message[] {
         text,
         timestamp: timestampLabel,
         createdAt: createdAtIso,
+        ...(parsedViolations !== undefined
+          ? { violations: parsedViolations }
+          : {}),
       } satisfies Message;
     })
     .filter((message): message is Message => Boolean(message));
@@ -412,11 +452,15 @@ export default function Home() {
       }
 
       const assistantText = extractAssistantText(payload);
+      const assistantViolations = extractViolations(payload);
       const finalAssistantMessage: Message = {
         ...assistantPlaceholder,
         text: assistantText,
         timestamp: timeFormatter.format(new Date()),
         createdAt: new Date().toISOString(),
+        ...(assistantViolations !== undefined
+          ? { violations: assistantViolations }
+          : {}),
       };
 
       const finalMessages = [
@@ -727,6 +771,48 @@ export default function Home() {
                         <p className="mt-3 whitespace-pre-line text-sm text-white/90">
                           {message.text}
                         </p>
+                        {message.role === "assistant" &&
+                        message.violations !== undefined ? (
+                          <div
+                            className={`mt-4 rounded-2xl border px-4 py-3 text-sm leading-6 shadow-inner ${
+                              message.violations.length > 0
+                                ? "border-rose-400/40 bg-rose-500/10 text-rose-100"
+                                : "border-emerald-400/40 bg-emerald-500/10 text-emerald-100"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.3em]">
+                              <span className="text-white/80">Privacy check</span>
+                              <span
+                                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                                  message.violations.length > 0
+                                    ? "bg-rose-400/20 text-rose-100"
+                                    : "bg-emerald-400/20 text-emerald-100"
+                                }`}
+                              >
+                                {message.violations.length > 0
+                                  ? "Violations found"
+                                  : "No issues"}
+                              </span>
+                            </div>
+                            {message.violations.length > 0 ? (
+                              <ul className="mt-3 space-y-2 text-sm leading-6">
+                                {message.violations.map((violation, index) => (
+                                  <li
+                                    key={`${message.id}-violation-${index}`}
+                                    className="flex items-start gap-3"
+                                  >
+                                    <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-current" />
+                                    <span className="flex-1">{violation}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="mt-3 text-sm leading-6 text-white">
+                                No policy violations detected.
+                              </p>
+                            )}
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   ))}
