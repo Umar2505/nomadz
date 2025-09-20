@@ -1,6 +1,10 @@
+from langchain_core.tools import tool
+from typing_extensions import Annotated
 import os
-import ag_rules
+import ag_rules, ag_data
 from langchain_core.prompts import PromptTemplate
+from langgraph.prebuilt import create_react_agent
+from langchain.chat_models import init_chat_model
 
 os.environ["LANGSMITH_TRACING"] = "true"
 
@@ -26,4 +30,76 @@ Query: {query}
 Answer:
 """
 rag_prompt_rules = PromptTemplate.from_template(template_rules_agent)
+violations = []
+@tool
+def rules_agent(query: Annotated[str, "the user query to analyze for rule violations"],
+    ) -> list[str]:
+    """Detect possible rule violations based on user input."""
+    messages = rag_prompt_rules.invoke({"query": query})
+    try:
+        violations = ag_rules.agent_executor.invoke(messages)
+    except Exception as e:
+        violations = []
+    return violations
 
+
+template_violation_correction_agent = """
+You are an AI assistant responsible for analyzing, correcting, and sanitizing user input while ensuring compliance with rules. 
+You have access to the following tools:
+
+1) violation_corrector(input: str, violated_rules: list[str]) → CorrectedOutput
+   - Corrects the input text based on the violated rules.
+   - Returns a structured output:
+     CorrectedOutput(
+         corrected_text: str,
+         applied_rules: list[str]
+     )
+
+2) sanitizer(input: CorrectedOutput) → CorrectedOutput
+   - Sanitizes the corrected_text field to remove or anonymize sensitive data using a PII analyzer.
+   - Returns a new CorrectedOutput with sanitized text and the same applied_rules.
+
+3) retriever_data(input: CorrectedOutput) → StructuredData
+   - Retrieves structured information from the database based on the sanitized corrected text.
+   - Returns the extracted structured information.
+
+Behavior:
+
+1. Receive user input and a list of potentially violated rules.  
+2. Pass the input and violated rules to `violation_corrector` to generate corrected text.  
+3. Take the output of `violation_corrector` and pass it to `sanitizer` to remove or anonymize sensitive data.  
+4. Take the sanitized CorrectedOutput and pass it to `retriever_data` to extract structured information.  
+5. Return the final output as:
+   CorrectedOutput(
+       corrected_text=<sanitized corrected text>,
+       applied_rules=<rules that were applied>
+   )
+
+Additional Guidelines:
+
+- Preserve the original meaning of the input while correcting rule violations.
+- Apply only relevant rules listed in violated_rules.
+- Ensure all sensitive data is sanitized before further processing.
+- The final output must conform to the CorrectedOutput schema.
+
+User Query: {query}
+Violated Rules: {violated_rules}
+
+Final Output:
+"""
+rag_prompt_data = PromptTemplate.from_template(template_rules_agent)
+
+@tool
+def data_agent(query: Annotated[str, "the user query to find data"],
+    ) -> list[str]:
+    """Analyze, correct, and sanitize user input while ensuring compliance with rules."""
+    messages = rag_prompt_data.invoke({"query": query})
+    try:
+        violations = ag_data.agent_executor.invoke(messages)
+    except Exception as e:
+        violations = []
+    return violations
+
+llm_main = init_chat_model("llama3-8b-8192", model_provider="groq")
+
+agent_executor = create_react_agent(llm_main, [rules_agent, data_agent])
