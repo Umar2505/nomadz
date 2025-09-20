@@ -223,3 +223,7 @@ def retriever_data(
 
 def guardrails():
     pass
+
+@tool(response_format="content_and_artifact")
+def average():
+    pass
