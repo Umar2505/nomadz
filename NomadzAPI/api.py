@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 
+# from app import main
 
 # Initialize the Flask application
 app = Flask(__name__)
@@ -15,10 +16,10 @@ def query():
             return jsonify({"status": "error", "message": "No JSON data provided"}), 400
 
         # Example variable to hold data
-        input_data = data
+        print("input data: ", data)
 
         # Example success response
-        return jsonify({"status": "success", "received_data": input_data}), 200
+        return jsonify({"output": data["query"], "violations": []}), 200
 
     except Exception as e:
         # Catch unexpected errors
