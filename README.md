@@ -15,7 +15,30 @@ Transparency: Show users what privacy measures were applied and why.
 ## Project diagram
 WIP
 
-## 🔧 Firebase Setup
+
+## 🖥️ Frontend
+
+- **Framework:** Next.js 15 with React 19, using the App Router for modern UI patterns.  
+- **Language:** TypeScript for type safety and better development experience.  
+- **Styling:** Tailwind CSS 4 with the new `@import "tailwindcss"` pattern, powered by PostCSS tooling.  
+- **Firebase Integration:**  
+  - **Authentication** handled with Firebase Auth.  
+  - **Data persistence** managed via Cloud Firestore.  
+  - Reusable Firebase initialization module + Firestore hooks power the chat workspace page.  
+
+---
+
+## ⚙️ Backend of the Frontend
+
+- A **Next.js Route Handler** (`app/api/chat/route.ts`) acts as a proxy between the client and the upstream Nomadz API.  
+- Responsibilities:  
+  - Parse JSON requests.  
+  - Map errors into consistent responses.  
+  - Select the correct API base URL depending on the environment.  
+  - Return results as standardized `NextResponse` objects.  
+
+
+## 🔧 To get the project working setup Firebase
 
 Follow these steps to enable Firebase in this project:
 
