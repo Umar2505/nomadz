@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Nomadz Compass",
+  title: "Nomadz Privacy Hub",
   description:
-    "Chat with an AI travel copilot to craft remote work adventures and curated itineraries.",
+    "Query sensitive data with a privacy-first agentic system that enforces policies, sanitizes answers, and preserves audit trails.",
 };
 
 export default function RootLayout({
