@@ -1,11 +1,82 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
-import type { FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { useState, type FormEvent } from "react";
+import { FirebaseError } from "firebase/app";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { doc, serverTimestamp, setDoc } from "firebase/firestore";
+
+import { auth, db } from "@/lib/firebase";
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof FirebaseError) {
+    switch (error.code) {
+      case "auth/email-already-in-use":
+        return "An account with this email already exists.";
+      case "auth/invalid-email":
+        return "The email address appears to be invalid.";
+      case "auth/weak-password":
+        return "Please choose a stronger password (at least 6 characters).";
+      default:
+        return "We couldn\u2019t create your account. Please try again.";
+    }
+  }
+
+  return "We couldn\u2019t create your account. Please try again.";
+}
 
 export default function SignUpPage() {
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const router = useRouter();
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    const formData = new FormData(event.currentTarget);
+    const name = String(formData.get("name") ?? "").trim();
+    const email = String(formData.get("email") ?? "").trim();
+    const password = String(formData.get("password") ?? "");
+    const confirm = String(formData.get("confirm") ?? "");
+
+    if (!name || !email || !password) {
+      setErrorMessage("Please fill in all required fields.");
+      return;
+    }
+
+    if (password !== confirm) {
+      setErrorMessage("Passwords do not match.");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setErrorMessage(null);
+
+      const credentials = await createUserWithEmailAndPassword(auth, email, password);
+
+      if (auth.currentUser && name) {
+        await updateProfile(auth.currentUser, { displayName: name });
+      }
+
+      await setDoc(
+        doc(db, "users", credentials.user.uid),
+        {
+          name,
+          email,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      );
+
+      router.push("/");
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -41,7 +112,7 @@ export default function SignUpPage() {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5" noValidate>
             <div className="space-y-2">
               <label
                 className="text-xs font-semibold uppercase tracking-[0.3em] text-white/60"
@@ -114,16 +185,23 @@ export default function SignUpPage() {
               />
             </div>
 
+            {errorMessage ? (
+              <p className="text-sm text-rose-300" role="alert" aria-live="polite">
+                {errorMessage}
+              </p>
+            ) : null}
+
             <button
               type="submit"
-              className="w-full rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-sky-500 px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:from-indigo-400 hover:via-purple-400 hover:to-sky-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              disabled={isSubmitting}
+              className="w-full rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-sky-500 px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:from-indigo-400 hover:via-purple-400 hover:to-sky-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Create account
+              {isSubmitting ? "Creating account..." : "Create account"}
             </button>
           </form>
 
           <p className="mt-8 text-center text-sm text-white/70">
-            Already have an account? 
+            Already have an account?{" "}
             <Link href="/sign-in" className="font-semibold text-indigo-200 transition hover:text-indigo-100">
               Sign in
             </Link>
