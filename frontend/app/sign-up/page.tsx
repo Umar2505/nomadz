@@ -82,35 +82,35 @@ export default function SignUpPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-900 text-slate-100">
       <div className="flex min-h-screen flex-col items-center justify-center px-6 py-16">
-        <Link
-          href="/"
-          className="mb-10 inline-flex items-center gap-3 text-sm font-medium text-white/70 transition hover:text-white"
-        >
-          <svg
-            aria-hidden="true"
-            className="h-4 w-4"
-            viewBox="0 0 20 20"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
+          <Link
+            href="/"
+            className="mb-10 inline-flex items-center gap-3 text-sm font-medium text-white/70 transition hover:text-white"
           >
-            <path
-              d="m12.5 5-5 5 5 5"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          Back to chats
-        </Link>
+            <svg
+              aria-hidden="true"
+              className="h-4 w-4"
+              viewBox="0 0 20 20"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m12.5 5-5 5 5 5"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            Back to workspace
+          </Link>
 
-        <div className="w-full max-w-md rounded-3xl border border-white/10 bg-black/60 p-10 shadow-2xl backdrop-blur-xl">
-          <div className="mb-8 text-center">
-            <h1 className="text-2xl font-semibold">Create your Nomadz account</h1>
-            <p className="mt-3 text-sm text-white/70">
-              Sign up to sync travel chats, itineraries, and insights across every device.
-            </p>
-          </div>
+          <div className="w-full max-w-md rounded-3xl border border-white/10 bg-black/60 p-10 shadow-2xl backdrop-blur-xl">
+            <div className="mb-8 text-center">
+              <h1 className="text-2xl font-semibold">Create your Nomadz Privacy Hub account</h1>
+              <p className="mt-3 text-sm text-white/70">
+                Set up secure access to privacy-governed conversations, policies, and audit trails across every device.
+              </p>
+            </div>
 
           <form onSubmit={handleSubmit} className="space-y-5" noValidate>
             <div className="space-y-2">
@@ -191,13 +191,13 @@ export default function SignUpPage() {
               </p>
             ) : null}
 
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-sky-500 px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:from-indigo-400 hover:via-purple-400 hover:to-sky-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isSubmitting ? "Creating account..." : "Create account"}
-            </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-sky-500 px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:from-indigo-400 hover:via-purple-400 hover:to-sky-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSubmitting ? "Creating account..." : "Create secure account"}
+              </button>
           </form>
 
           <p className="mt-8 text-center text-sm text-white/70">
