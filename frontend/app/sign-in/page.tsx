@@ -62,35 +62,35 @@ export default function SignInPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-900 text-slate-100">
       <div className="flex min-h-screen flex-col items-center justify-center px-6 py-16">
-        <Link
-          href="/"
-          className="mb-10 inline-flex items-center gap-3 text-sm font-medium text-white/70 transition hover:text-white"
-        >
-          <svg
-            aria-hidden="true"
-            className="h-4 w-4"
-            viewBox="0 0 20 20"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
+          <Link
+            href="/"
+            className="mb-10 inline-flex items-center gap-3 text-sm font-medium text-white/70 transition hover:text-white"
           >
-            <path
-              d="m12.5 5-5 5 5 5"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          Back to chats
-        </Link>
+            <svg
+              aria-hidden="true"
+              className="h-4 w-4"
+              viewBox="0 0 20 20"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m12.5 5-5 5 5 5"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            Back to workspace
+          </Link>
 
-        <div className="w-full max-w-md rounded-3xl border border-white/10 bg-black/60 p-10 shadow-2xl backdrop-blur-xl">
-          <div className="mb-8 text-center">
-            <h1 className="text-2xl font-semibold">Sign in to Nomadz</h1>
-            <p className="mt-3 text-sm text-white/70">
-              Access your saved itineraries and pick up conversations without missing a beat.
-            </p>
-          </div>
+          <div className="w-full max-w-md rounded-3xl border border-white/10 bg-black/60 p-10 shadow-2xl backdrop-blur-xl">
+            <div className="mb-8 text-center">
+              <h1 className="text-2xl font-semibold">Sign in to Nomadz Privacy Hub</h1>
+              <p className="mt-3 text-sm text-white/70">
+                Access your privacy-audited workspace and continue secure analyses without interruption.
+              </p>
+            </div>
 
           <form onSubmit={handleSubmit} className="space-y-5" noValidate>
             <div className="space-y-2">
@@ -147,9 +147,9 @@ export default function SignInPage() {
           </form>
 
           <p className="mt-8 text-center text-sm text-white/70">
-            New to Nomadz?{" "}
+            New to Nomadz Privacy Hub?{" "}
             <Link href="/sign-up" className="font-semibold text-indigo-200 transition hover:text-indigo-100">
-              Create an account
+              Create your secure account
             </Link>
           </p>
         </div>
