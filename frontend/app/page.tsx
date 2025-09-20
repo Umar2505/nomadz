@@ -29,6 +29,7 @@ type Message = {
   timestamp: string;
   createdAt: string;
   violations?: string[];
+  isLoading?: boolean;
 };
 
 type HistoryItem = {
@@ -331,7 +332,11 @@ export default function Home() {
     }
 
     try {
-      const serializedMessages = finalMessages.map((message) => ({ ...message }));
+      const serializedMessages = finalMessages.map((message) => {
+        const persistableMessage = { ...message };
+        delete persistableMessage.isLoading;
+        return persistableMessage;
+      });
       const userDocRef = doc(db, "users", user.uid);
 
       await setDoc(
@@ -421,6 +426,7 @@ export default function Home() {
       text: "Nomadz AI is preparing a privacy-screened response...",
       timestamp: timeFormatter.format(now),
       createdAt: now.toISOString(),
+      isLoading: true,
     };
 
     const optimisticMessages = [...messages, userMessage, assistantPlaceholder];
@@ -466,6 +472,7 @@ export default function Home() {
         text: assistantText,
         timestamp: timeFormatter.format(new Date()),
         createdAt: new Date().toISOString(),
+        isLoading: false,
         ...(assistantViolations !== undefined
           ? { violations: assistantViolations }
           : {}),
@@ -495,6 +502,7 @@ export default function Home() {
         text: `Nomadz AI ran into an issue: ${fallbackError}`,
         timestamp: timeFormatter.format(new Date()),
         createdAt: new Date().toISOString(),
+        isLoading: false,
       };
 
       const erroredMessages = [
@@ -821,58 +829,75 @@ export default function Home() {
                   </div>
 
                 <div className="flex-1 space-y-4 overflow-y-auto px-6 py-6">
-                  {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex ${
-                        message.role === "user" ? "justify-end" : "justify-start"
-                      }`}
-                    >
+                  {messages.map((message) => {
+                    const showLoadingIndicator =
+                      message.role === "assistant" && Boolean(message.isLoading);
+
+                    return (
                       <div
-                        className={`max-w-[75%] rounded-3xl px-5 py-4 text-sm leading-6 shadow-xl backdrop-blur ${
-                          message.role === "user"
-                            ? "bg-gradient-to-br from-indigo-500 to-purple-500 text-white"
-                            : "bg-white/10 text-white/90"
+                        key={message.id}
+                        className={`flex ${
+                          message.role === "user" ? "justify-end" : "justify-start"
                         }`}
                       >
-                        <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.2em] text-white/60">
-                          <span>{message.name}</span>
-                          <span>{message.timestamp}</span>
-                        </div>
-                        <p className="mt-3 whitespace-pre-line text-sm text-white/90">
-                          {message.text}
-                        </p>
-                        {message.role === "assistant" &&
-                        message.violations !== undefined ? (
-                          <div className="mt-3 text-xs">
-                            {message.violations.length > 0 ? (
-                              <>
-                                <p className="font-semibold uppercase tracking-[0.2em] text-rose-200">
-                                  Privacy notice
-                                </p>
-                                <ul className="mt-2 space-y-1 text-rose-100">
-                                  {message.violations.map((violation, index) => (
-                                    <li
-                                      key={`${message.id}-violation-${index}`}
-                                      className="flex items-start gap-2"
-                                    >
-                                      <span className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-current" />
-                                      <span className="flex-1">{violation}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </>
-                            ) : (
-                              <p className="flex items-center gap-2 font-medium text-emerald-300">
-                                <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400" />
-                                Privacy check passed — no policy issues detected.
-                              </p>
-                            )}
+                        <div
+                          className={`max-w-[75%] rounded-3xl px-5 py-4 text-sm leading-6 shadow-xl backdrop-blur ${
+                            message.role === "user"
+                              ? "bg-gradient-to-br from-indigo-500 to-purple-500 text-white"
+                              : "bg-white/10 text-white/90"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.2em] text-white/60">
+                            <span>{message.name}</span>
+                            <span>{message.timestamp}</span>
                           </div>
-                        ) : null}
+                          <p className="mt-3 whitespace-pre-line text-sm text-white/90">
+                            {showLoadingIndicator ? (
+                              <span className="inline-flex items-center gap-3 align-middle">
+                                <span className="inline-flex h-4 w-4 items-center justify-center text-white/60">
+                                  <span
+                                    aria-hidden="true"
+                                    className="h-3 w-3 animate-spin rounded-full border-2 border-white/30 border-t-white/80"
+                                  />
+                                </span>
+                                <span>{message.text}</span>
+                              </span>
+                            ) : (
+                              message.text
+                            )}
+                          </p>
+                          {message.role === "assistant" &&
+                          message.violations !== undefined ? (
+                            <div className="mt-3 text-xs">
+                              {message.violations.length > 0 ? (
+                                <>
+                                  <p className="font-semibold uppercase tracking-[0.2em] text-rose-200">
+                                    Privacy notice
+                                  </p>
+                                  <ul className="mt-2 space-y-1 text-rose-100">
+                                    {message.violations.map((violation, index) => (
+                                      <li
+                                        key={`${message.id}-violation-${index}`}
+                                        className="flex items-start gap-2"
+                                      >
+                                        <span className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-current" />
+                                        <span className="flex-1">{violation}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </>
+                              ) : (
+                                <p className="flex items-center gap-2 font-medium text-emerald-300">
+                                  <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+                                  Privacy check passed — no policy issues detected.
+                                </p>
+                              )}
+                            </div>
+                          ) : null}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 <form onSubmit={handleSend} className="border-t border-white/10 bg-black/60 px-6 py-5">
