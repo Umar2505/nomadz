@@ -738,7 +738,7 @@ export default function Home() {
                       type="button"
                       onClick={handleNewChat}
                       disabled={isLoading || !isAuthenticated}
-                      className="flex h-12 w-full items-center justify-center rounded-2xl border border-dashed border-white/20 bg-transparent text-sm font-medium text-white/80 transition hover:border-white/50 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-60 sm:w-12"
+                      className="flex h-12 w-12 shrink-0 items-center justify-center self-start rounded-2xl border border-dashed border-white/20 bg-transparent text-sm font-medium text-white/80 transition hover:border-white/50 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-60 sm:self-auto"
                     >
                       <svg
                         aria-hidden="true"
