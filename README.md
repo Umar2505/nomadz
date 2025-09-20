@@ -6,12 +6,11 @@
 * Agent 4: Generate a response
 * Agent 5: Last check -> data anonymiser  
 
+Transparency: Show users what privacy measures were applied and why.
+
 <div align="center">
   <img width="561" height="461" alt="Diagram" src="https://github.com/user-attachments/assets/fd6a73eb-6ef8-4d32-9fbd-aec62ee997eb" />
 </div>
-
-
-Transparency: Show users what privacy measures were applied and why.
 
 ## Project diagram
 WIP
