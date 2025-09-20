@@ -162,32 +162,15 @@ Answer:"""
 custom_rag_prompt = PromptTemplate.from_template(template)
 
 
-@tool
-def parser(
-    input: Annotated[str, "the query to analyze for rule keywords"],
-) -> list[str]:
-    """Analyze the query for possible rule violation keywords."""
-    messages = custom_rag_prompt.invoke({"query": input})
-    try:
-        keywords = ",".split(llm_tool.invoke(messages))
-    except Exception as e:
-        keywords = []
-    return keywords
+class CorrectedOutput(BaseModel):
+    """Structured output after applying violated rule corrections."""
 
-
-@tool(response_format="content_and_artifact")
-def retriever_rules(
-    keywords: Annotated[list[str], "the keywords to search for in the vector store"],
-) -> tuple[str, List[Document]]:
-    """Retrieve information based on keywords."""
-    if not keywords:
-        return "No relevant keywords found.", []
-    retrieved_docs = vector_store1.similarity_search(keywords, k=2)
-    serialized = "\n\n".join(
-        (f"Source: {doc.metadata}\nContent: {doc.page_content}")
-        for doc in retrieved_docs
+    corrected_text: str = Field(
+        description="The corrected text based on the violated rules and input"
     )
-    return serialized, retrieved_docs
+    applied_rules: List[str] = Field(
+        description="List of violated rules that were applied for correction"
+    )
 
 
 class CorrectedOutput(BaseModel):
@@ -201,7 +184,75 @@ class CorrectedOutput(BaseModel):
     )
 
 
-@tool(response_format="content_and_artifact")
+# Initialize Presidio engines
+analyzer = AnalyzerEngine()
+anonymizer = AnonymizerEngine()
+
+
+# @tool
+# def parser(
+#     input: Annotated[str, "the query to analyze for rule keywords"],
+# ) -> list[str]:
+#     """Analyze the query for possible rule violation keywords."""
+#     messages = custom_rag_prompt.invoke({"query": input})
+#     try:
+#         keywords = ",".split(llm_tool.invoke(messages))
+#     except Exception as e:
+#         keywords = ["No items found"]
+#     return keywords
+
+
+import json
+
+
+@tool
+def parser(
+    input: Annotated[str, "the query to analyze for rule keywords"],
+) -> list[str]:
+    """Analyze the query for possible rule violation keywords."""
+    try:
+        messages = custom_rag_prompt.invoke({"query": input})
+
+        # Convert messages to plain string
+        if isinstance(messages, list):
+            messages_text = " ".join(getattr(m, "content", str(m)) for m in messages)
+        elif hasattr(messages, "content"):
+            messages_text = messages.content
+        else:
+            messages_text = str(messages)
+
+        keywords_text = llm_tool.invoke(messages_text)
+
+        # Convert to list of strings
+        keywords = [kw.strip() for kw in keywords_text.split(",") if kw.strip()]
+
+    except Exception as e:
+        keywords = ["No items found"]
+
+    # Return plain list of strings
+    return keywords
+
+
+@tool
+def retriever_rules(
+    keywords: Annotated[list[str], "the keywords to search for in the vector store"],
+) -> str:
+    """Retrieve information based on keywords."""
+    if not keywords:
+        return "No relevant keywords found."
+
+    retrieved_docs = vector_store1.similarity_search(keywords, k=2)
+
+    if not retrieved_docs:
+        return "No relevant documents found."
+
+    serialized = "\n\n".join(
+        f"Source: {doc.metadata}\nContent: {doc.page_content}" for doc in retrieved_docs
+    )
+    return serialized
+
+
+@tool
 def violation_corrector(
     input: Annotated[str, "The input text to analyze"],
     violated_rules: Annotated[List[str], "List of rules violated by the input"],
@@ -234,23 +285,7 @@ def violation_corrector(
     return result
 
 
-class CorrectedOutput(BaseModel):
-    """Structured output after applying violated rule corrections."""
-
-    corrected_text: str = Field(
-        description="The corrected text based on the violated rules and input"
-    )
-    applied_rules: List[str] = Field(
-        description="List of violated rules that were applied for correction"
-    )
-
-
-# Initialize Presidio engines
-analyzer = AnalyzerEngine()
-anonymizer = AnonymizerEngine()
-
-
-@tool(response_format="content_and_artifact")
+@tool
 def sanitizer(input: CorrectedOutput) -> CorrectedOutput:
     """
     General sanitizer that uses Microsoft Presidio to anonymize sensitive data
@@ -275,7 +310,7 @@ def sanitizer(input: CorrectedOutput) -> CorrectedOutput:
     )
 
 
-@tool(response_format="content_and_artifact")
+@tool
 def retriever_data(
     input: Annotated[CorrectedOutput, "The sanitized corrected text and applied rules"],
 ):
@@ -291,36 +326,32 @@ def retriever_data(
     return result
 
 
-@tool(response_format="content_and_artifact")
-def average(numbers: List[float]) -> float:
+@tool
+def average(numbers: List[float]) -> str:
     """Calculate the average of a list of numbers."""
     if not numbers:
         return "No numbers provided.", None
     avg = sum(numbers) / len(numbers)
-    return f"The average is {avg}.", avg
+    return f"The average is {avg}."
 
 
-@tool(response_format="content_and_artifact")
-def total(numbers: List[float]) -> float:
+@tool
+def total(numbers: List[float]) -> str:
     """Calculate the total sum of a list of numbers."""
-    if not numbers:
-        return "No numbers provided.", None
     result = sum(numbers)
-    return f"The total is {result}.", result
+    return f"The total is {result}."
 
 
-@tool(response_format="content_and_artifact")
-def greater_than(a: float, b: float) -> bool:
+@tool
+def greater_than(a: float, b: float) -> str:
     """Return True if a is greater than b, otherwise False."""
-    result = a > b
-    return str(result), result
+    return f"{a} is greater than {b}: {a > b}"
 
 
-@tool(response_format="content_and_artifact")
-def less_than(a: float, b: float) -> bool:
+@tool
+def less_than(a: float, b: float) -> str:
     """Return True if a is less than b, otherwise False."""
-    result = a < b
-    return str(result), result
+    return f"{a} is less than {b}: {a < b}"
 
 
 # def guardrails():

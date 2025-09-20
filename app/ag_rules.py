@@ -4,4 +4,5 @@ import tools
 
 llm_ruler = init_chat_model("allam-2-7b", model_provider="groq")
 
+# agent_executor = create_react_agent(llm_ruler, [tools.retriever_rules])
 agent_executor = create_react_agent(llm_ruler, [tools.parser, tools.retriever_rules])

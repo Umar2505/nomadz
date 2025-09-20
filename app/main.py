@@ -93,17 +93,33 @@ Final Output:
 rag_prompt_data = PromptTemplate.from_template(template_rules_agent)
 
 
+# @tool
+# def data_agent(
+#     query: Annotated[str, "the user query to find data"],
+# ) -> list[str]:
+#     """Analyze, correct, and sanitize user input while ensuring compliance with rules."""
+#     messages = rag_prompt_data.invoke({"query": query})
+#     try:
+#         violations = ag_data.agent_executor.invoke(messages)
+#     except Exception as e:
+#         violations = []
+#     return violations
+
+
 @tool
 def data_agent(
     query: Annotated[str, "the user query to find data"],
-) -> list[str]:
+    rules: Annotated[list[str], "list of violated rules from Rules_agent"] = [],
+) -> str:  # Must be str, not list
     """Analyze, correct, and sanitize user input while ensuring compliance with rules."""
     messages = rag_prompt_data.invoke({"query": query})
     try:
         violations = ag_data.agent_executor.invoke(messages)
-    except Exception as e:
+    except Exception:
         violations = []
-    return violations
+
+    # Return a string (even if empty)
+    return ", ".join(violations) if violations else "No violations found."
 
 
 # llm_main = init_chat_model("allam-2-7b", model_provider="groq")

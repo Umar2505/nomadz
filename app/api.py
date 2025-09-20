@@ -13,6 +13,15 @@ import main
 app = Flask(__name__)
 
 
+def serialize_messages(obj):
+    """Convert LangChain messages or any object to JSON-serializable form."""
+    if isinstance(obj, list):
+        return [m.content if hasattr(m, "content") else str(m) for m in obj]
+    if hasattr(obj, "content"):
+        return obj.content
+    return str(obj)
+
+
 @app.route("/api", methods=["POST"])
 def query():
     try:
@@ -23,10 +32,6 @@ def query():
             return jsonify({"status": "error", "message": "No JSON data provided"}), 400
 
         # Example variable to hold data
-
-        # prompt = (main.template_main_data.invoke({"query": data["query"]})).to_string()
-        # print("prompt received: ", prompt)
-        # print("prompt type: ", type(prompt))
         prompt_value = main.template_main_data.invoke({"query": data["query"]})
         print("prompt_value type:", type(prompt_value))  # should be StringPromptValue
 
@@ -35,13 +40,22 @@ def query():
 
         violations = main.violations
         print("violations received: ", violations)
+
         response = main.main_agent_executor.invoke(
             {"messages": [{"role": "user", "content": prompt}]}
         )
         print("response received: ", response)
 
-        # Example success response
-        return jsonify({"output": response, "violations": violations}), 200
+        # Serialize messages before returning
+        response_serialized = serialize_messages(response)
+        violations_serialized = serialize_messages(violations)
+
+        return (
+            jsonify(
+                {"output": response_serialized, "violations": violations_serialized}
+            ),
+            200,
+        )
 
     except Exception as e:
         error_trace = traceback.format_exc()
