@@ -13,10 +13,9 @@ from presidio_analyzer import AnalyzerEngine
 from presidio_anonymizer import AnonymizerEngine
 from typing import List
 
+llm_tool = init_chat_model("allam-2-7b", model_provider="groq")
 
-llm_tool = init_chat_model("llama3-8b-8192", model_provider="groq")
-
-file_path1 = "app/data/CELEX.pdf"
+file_path1 = "data/CELEX.pdf"
 loader1 = PyPDFLoader(file_path1)
 
 rule = loader1.load()
@@ -25,7 +24,7 @@ text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=20
 rules = text_splitter.split_documents(rule)
 
 # Load and split CSV document
-file_path2 = "app/docs/patients.csv"
+file_path2 = "docs/patients.csv"
 loader2 = CSVLoader(
     file_path2,
     metadata_columns=[

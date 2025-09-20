@@ -31,9 +31,12 @@ Answer:
 """
 rag_prompt_rules = PromptTemplate.from_template(template_rules_agent)
 violations = []
+
+
 @tool
-def rules_agent(query: Annotated[str, "the user query to analyze for rule violations"],
-    ) -> list[str]:
+def rules_agent(
+    query: Annotated[str, "the user query to analyze for rule violations"],
+) -> list[str]:
     """Detect possible rule violations based on user input."""
     messages = rag_prompt_rules.invoke({"query": query})
     try:
@@ -89,9 +92,11 @@ Final Output:
 """
 rag_prompt_data = PromptTemplate.from_template(template_rules_agent)
 
+
 @tool
-def data_agent(query: Annotated[str, "the user query to find data"],
-    ) -> list[str]:
+def data_agent(
+    query: Annotated[str, "the user query to find data"],
+) -> list[str]:
     """Analyze, correct, and sanitize user input while ensuring compliance with rules."""
     messages = rag_prompt_data.invoke({"query": query})
     try:
@@ -100,7 +105,9 @@ def data_agent(query: Annotated[str, "the user query to find data"],
         violations = []
     return violations
 
-llm_main = init_chat_model("llama3-8b-8192", model_provider="groq")
+
+# llm_main = init_chat_model("allam-2-7b", model_provider="groq")
+llm_main = init_chat_model("llama-3.1-8b-instant", model_provider="groq")
 
 main_agent_executor = create_react_agent(llm_main, [rules_agent, data_agent])
 

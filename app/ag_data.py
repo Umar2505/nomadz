@@ -1,3 +1,16 @@
+import os
+import getpass
+
+# Option A: Prompt for secret
+if not os.environ.get("LANGCHAIN_API_KEY"):
+    os.environ["LANGCHAIN_API_KEY"] = getpass.getpass(
+        "Enter LangChain/LangSmith API key:"
+    )
+
+# # 1️⃣ Set the Groq key before any LangChain import
+# if not os.environ.get("GROQ_API_KEY"):
+#     os.environ["GROQ_API_KEY"] = getpass.getpass("Enter API key for Groq:")
+
 from tools import (
     retriever_data,
     sanitizer,
@@ -7,14 +20,14 @@ from tools import (
     less_than,
     greater_than,
 )
-import getpass
-import os
+
 from langchain.chat_models import init_chat_model
-from langgraph.checkpoint.memory import MemorySaver
+
+# from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
 
-if not os.environ.get("GROQ_API_KEY"):
-    os.environ["GROQ_API_KEY"] = getpass.getpass("Enter API key for Groq: ")
+# if not os.environ.get("GROQ_API_KEY"):
+#     os.environ["GROQ_API_KEY"] = getpass.getpass("Enter API key for Groq: ")
 
 from langchain.chat_models import init_chat_model
 
@@ -29,4 +42,5 @@ tools = [
     less_than,
     greater_than,
 ]
-agent_executor = create_react_agent(llm=model, tools=tools)
+agent_executor = create_react_agent(model=model, tools=tools)
+
