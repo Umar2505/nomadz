@@ -1,4 +1,12 @@
-from tools import retriever_data, sanitizer, violation_corrector
+from tools import (
+    retriever_data,
+    sanitizer,
+    violation_corrector,
+    average,
+    total,
+    less_than,
+    greater_than,
+)
 import getpass
 import os
 from langchain.chat_models import init_chat_model
@@ -12,5 +20,13 @@ from langchain.chat_models import init_chat_model
 
 model = init_chat_model("allam-2-7b", model_provider="groq")
 
-tools = [violation_corrector, retriever_data, sanitizer]
+tools = [
+    violation_corrector,
+    retriever_data,
+    sanitizer,
+    average,
+    total,
+    less_than,
+    greater_than,
+]
 agent_executor = create_react_agent(llm=model, tools=tools)
