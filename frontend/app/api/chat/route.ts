@@ -6,7 +6,7 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
   "http://127.0.0.1:5000";
 
-const API_ENDPOINT = `${API_BASE_URL.replace(/\/$/, "")}/api/test`;
+const API_ENDPOINT = `${API_BASE_URL.replace(/\/$/, "")}/api`;
 
 export async function POST(request: Request) {
   let payload: unknown = {};
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     if (!upstreamResponse.ok) {
       const errorMessage =
         typeof data === "object" && data && "error" in data &&
-        typeof (data as { error?: unknown }).error === "string"
+          typeof (data as { error?: unknown }).error === "string"
           ? (data as { error: string }).error
           : "The Nomadz API returned an unexpected error.";
 
