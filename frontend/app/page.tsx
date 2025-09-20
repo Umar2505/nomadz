@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   addDoc,
@@ -49,7 +50,7 @@ const historyDateFormatter = new Intl.DateTimeFormat([], {
 });
 
 const FALLBACK_ASSISTANT_RESPONSE =
-  "Nomadz AI connected but didn\u2019t return any details. Try asking again.";
+  "Nomadz AI connected but didn\u2019t return any privacy-filtered insights. Please try again.";
 
 function extractAssistantText(payload: unknown): string {
   if (payload && typeof payload === "object") {
@@ -111,7 +112,7 @@ function createDefaultMessages(): Message[] {
       id: "welcome",
       role: "assistant",
       name: "Nomadz AI",
-      text: "Hey traveler! I\u2019m here to design flexible remote-work adventures tailored to your vibe. Where do you want to explore next?",
+      text: "Hi there! I help you query sensitive data while enforcing privacy safeguards. What question should we investigate?",
       timestamp: timeFormatter.format(now),
       createdAt: now.toISOString(),
     },
@@ -196,7 +197,7 @@ function parseChatSnapshot(
           .reverse()
           .find((message) => message.role === "assistant")?.text ??
         messages[messages.length - 1]?.text ??
-        "Start planning your next trip.";
+        "Begin a new privacy-preserving analysis.";
 
   let updatedAtDate = new Date();
 
@@ -221,6 +222,7 @@ export default function Home() {
     loading: authLoading,
     signOut: signOutUser,
   } = useAuth();
+  const router = useRouter();
 
   const [messages, setMessages] = useState<Message[]>(() => createDefaultMessages());
   const [inputValue, setInputValue] = useState("");
@@ -230,6 +232,7 @@ export default function Home() {
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [pendingChatId, setPendingChatId] = useState<string | null>(null);
   const [deletingChatId, setDeletingChatId] = useState<string | null>(null);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const hasInitializedActiveChat = useRef(false);
 
   useEffect(() => {
@@ -391,7 +394,12 @@ export default function Home() {
 
     const trimmed = inputValue.trim();
 
-    if (!user || !trimmed || isLoading) {
+    if (!trimmed || isLoading) {
+      return;
+    }
+
+    if (!user) {
+      router.push("/sign-in");
       return;
     }
 
@@ -410,7 +418,7 @@ export default function Home() {
       id: assistantMessageId,
       role: "assistant",
       name: "Nomadz AI",
-      text: "Nomadz AI is mapping your remote-work adventure...",
+      text: "Nomadz AI is preparing a privacy-screened response...",
       timestamp: timeFormatter.format(now),
       createdAt: now.toISOString(),
     };
@@ -520,7 +528,13 @@ export default function Home() {
   };
 
   const handleSelectChat = (chatId: string) => {
-    if (isLoading || chatId === activeChatId) {
+    if (isLoading) {
+      return;
+    }
+
+    setIsHistoryOpen(false);
+
+    if (chatId === activeChatId) {
       return;
     }
 
@@ -593,19 +607,104 @@ export default function Home() {
 
   const isAuthenticated = useMemo(() => Boolean(user), [user]);
 
+  const historyItems = isAuthenticated ? (
+    chats.length > 0 ? (
+      chats.map((chat) => {
+        const isActive = chat.id === activeChatId;
+        const isDeleting = deletingChatId === chat.id;
+
+        return (
+          <div key={chat.id} className="relative">
+            <button
+              type="button"
+              onClick={() => handleSelectChat(chat.id)}
+              className={`w-full rounded-2xl border px-4 py-4 pr-12 text-left transition ${
+                isActive
+                  ? "border-white/40 bg-white/15"
+                  : "border-white/10 bg-black/30 hover:border-white/30 hover:bg-white/10"
+              } disabled:cursor-not-allowed disabled:opacity-60`}
+              disabled={isDeleting}
+            >
+              <p className="text-sm font-semibold text-white">{chat.title}</p>
+              <p className="mt-1 text-xs text-white/60">{chat.preview}</p>
+              <p className="mt-3 text-[11px] uppercase tracking-[0.2em] text-white/40">
+                Updated {chat.updatedAt}
+              </p>
+            </button>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                void handleDeleteChat(chat.id);
+              }}
+              disabled={isDeleting}
+              className="absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-black/60 text-white/60 transition hover:border-white/30 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-60"
+              aria-label="Delete chat"
+            >
+              <svg
+                aria-hidden="true"
+                className="h-4 w-4"
+                viewBox="0 0 20 20"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M6 6l8 8m0-8l-8 8"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                />
+              </svg>
+              <span className="sr-only">Delete chat</span>
+            </button>
+          </div>
+        );
+      })
+    ) : (
+      <p className="text-sm text-white/60">Submit a query to see it saved here.</p>
+    )
+  ) : (
+    <p className="text-sm text-white/60">
+      Sign in to sync your privacy-audited chats across devices.
+    </p>
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-900 text-slate-100">
       <div className="flex min-h-screen flex-col bg-black/20 backdrop-blur-xl">
         <header className="border-b border-white/10 bg-black/40">
           <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
             <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => setIsHistoryOpen(true)}
+                className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-white transition hover:border-white/30 hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white lg:hidden"
+                aria-label="Open chat history"
+              >
+                <svg
+                  aria-hidden="true"
+                  className="h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M4 5h12M4 10h12M4 15h7"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
               <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-tr from-indigo-500 to-purple-400 text-lg font-semibold text-white shadow-lg">
                 N
               </span>
               <div>
-                <p className="text-lg font-semibold leading-tight">Nomadz Compass</p>
+                <p className="text-lg font-semibold leading-tight">Nomadz Privacy Hub</p>
                 <p className="text-xs text-white/60">
-                  Plan remote work adventures with an AI travel copilot.
+                  Answer sensitive questions with privacy-aware automation.
                 </p>
               </div>
             </div>
@@ -615,7 +714,7 @@ export default function Home() {
               <div className="flex items-center gap-4">
                 <div className="text-right">
                   <p className="text-sm font-semibold text-white">
-                    {user?.displayName ?? "Nomadz Explorer"}
+                    {user?.displayName ?? "Nomadz Analyst"}
                   </p>
                   <p className="text-xs text-white/60">{user?.email}</p>
                 </div>
@@ -642,112 +741,84 @@ export default function Home() {
           <aside className="hidden w-72 flex-col border-r border-white/10 bg-white/5 px-6 py-8 backdrop-blur-2xl lg:flex">
             <div className="mb-6 flex items-center justify-between">
               <h2 className="text-xs font-semibold uppercase tracking-[0.3em] text-white/70">
-                Recent chats
+                Recent queries
               </h2>
               <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_12px_2px_rgba(52,211,153,0.6)]" />
             </div>
-            <nav className="flex-1 space-y-3 overflow-y-auto pr-2">
-              {isAuthenticated ? (
-                chats.length > 0 ? (
-                  chats.map((chat) => {
-                    const isActive = chat.id === activeChatId;
-                    const isDeleting = deletingChatId === chat.id;
-
-                    return (
-                      <div key={chat.id} className="relative">
-                        <button
-                          type="button"
-                          onClick={() => handleSelectChat(chat.id)}
-                          className={`w-full rounded-2xl border px-4 py-4 pr-12 text-left transition ${
-                            isActive
-                              ? "border-white/40 bg-white/15"
-                              : "border-white/10 bg-black/30 hover:border-white/30 hover:bg-white/10"
-                          } disabled:cursor-not-allowed disabled:opacity-60`}
-                          disabled={isDeleting}
-                        >
-                          <p className="text-sm font-semibold text-white">
-                            {chat.title}
-                          </p>
-                          <p className="mt-1 text-xs text-white/60">{chat.preview}</p>
-                          <p className="mt-3 text-[11px] uppercase tracking-[0.2em] text-white/40">
-                            Updated {chat.updatedAt}
-                          </p>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            void handleDeleteChat(chat.id);
-                          }}
-                          disabled={isDeleting}
-                          className="absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-black/60 text-white/60 transition hover:border-white/30 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-60"
-                          aria-label="Delete chat"
-                        >
-                          <svg
-                            aria-hidden="true"
-                            className="h-4 w-4"
-                            viewBox="0 0 20 20"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M6 6l8 8m0-8l-8 8"
-                              stroke="currentColor"
-                              strokeWidth="1.6"
-                              strokeLinecap="round"
-                            />
-                          </svg>
-                          <span className="sr-only">Delete chat</span>
-                        </button>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <p className="text-sm text-white/60">
-                    Start a conversation to see it saved here.
-                  </p>
-                )
-              ) : (
-                <p className="text-sm text-white/60">
-                  Sign in to sync your travel chats across devices.
-                </p>
-              )}
-            </nav>
+            <nav className="flex-1 space-y-3 overflow-y-auto pr-2">{historyItems}</nav>
           </aside>
+
+          {isHistoryOpen ? (
+            <div className="fixed inset-0 z-40 flex lg:hidden">
+              <div
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                role="presentation"
+                onClick={() => setIsHistoryOpen(false)}
+              />
+              <aside className="relative ml-auto flex h-full w-80 max-w-full flex-col border-l border-white/10 bg-black/80 backdrop-blur-xl">
+                <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+                  <h2 className="text-xs font-semibold uppercase tracking-[0.3em] text-white/70">
+                    Recent queries
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => setIsHistoryOpen(false)}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 text-white/70 transition hover:border-white/30 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                    aria-label="Close chat history"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      className="h-4 w-4"
+                      viewBox="0 0 20 20"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M6 6l8 8m0-8l-8 8"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </button>
+                </div>
+                <nav className="flex-1 space-y-3 overflow-y-auto px-6 py-4">{historyItems}</nav>
+              </aside>
+            </div>
+          ) : null}
 
           <main className="flex flex-1 flex-col overflow-hidden">
             <div className="mx-auto flex h-full w-full max-w-4xl flex-col gap-8 px-6 py-10">
-              <section className="min-h-[64px]">
-                {showIntro ? (
-                  <p className="max-w-2xl text-sm text-white/80">
-                    {isAuthenticated
-                      ? "Nomadz Compass transforms scattered travel research into a single actionable plan so you can land, plug in, and start living like a local from day one."
-                      : "Sign in to Nomadz to save your itineraries and chat history. Nomadz Compass will help you craft a flexible remote-work adventure once you\u2019re logged in."}
-                  </p>
-                ) : (
-                  <div className="flex items-center gap-3 rounded-3xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/70 shadow-lg">
-                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-indigo-500 to-sky-400 text-xs font-semibold uppercase text-white">
-                      Beta
-                    </span>
-                    Responses are streaming directly from the Nomadz intelligence engine via the connected API.
-                  </div>
-                )}
-              </section>
-
-              <section className="flex flex-1 flex-col overflow-hidden rounded-3xl border border-white/10 bg-black/40 shadow-2xl">
-                <div className="flex items-center justify-between border-b border-white/10 px-6 py-5">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/60">
-                      Live conversation
-                    </p>
-                    <p className="mt-1 text-sm text-white/70">
+                <section className="min-h-[64px]">
+                  {showIntro ? (
+                    <p className="max-w-2xl text-sm text-white/80">
                       {isAuthenticated
-                        ? "You\u2019re chatting with Nomadz AI."
-                        : "Sign in to start chatting with Nomadz AI."}
+                        ? "Nomadz Privacy Hub coordinates policy-aware agents so you can explore sensitive datasets without exposing private details."
+                        : "Sign in to Nomadz to preserve audit trails and configure privacy guardrails before asking about sensitive data."}
                     </p>
+                  ) : (
+                    <div className="flex items-center gap-3 rounded-3xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/70 shadow-lg">
+                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-indigo-500 to-sky-400 text-xs font-semibold uppercase text-white">
+                        Beta
+                      </span>
+                      Responses are generated by the Nomadz privacy orchestration engine with layered policy checks.
+                    </div>
+                  )}
+                </section>
+
+                <section className="flex flex-1 flex-col overflow-hidden rounded-3xl border border-white/10 bg-black/40 shadow-2xl">
+                  <div className="flex items-center justify-between border-b border-white/10 px-6 py-5">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/60">
+                        Privacy-audited conversation
+                      </p>
+                      <p className="mt-1 text-sm text-white/70">
+                        {isAuthenticated
+                          ? "Nomadz AI applies privacy controls to every answer."
+                          : "Sign in to collaborate with Nomadz AI on privacy-safe analyses."}
+                      </p>
+                    </div>
                   </div>
-                </div>
 
                 <div className="flex-1 space-y-4 overflow-y-auto px-6 py-6">
                   {messages.map((message) => (
@@ -773,42 +844,28 @@ export default function Home() {
                         </p>
                         {message.role === "assistant" &&
                         message.violations !== undefined ? (
-                          <div
-                            className={`mt-4 rounded-2xl border px-4 py-3 text-sm leading-6 shadow-inner ${
-                              message.violations.length > 0
-                                ? "border-rose-400/40 bg-rose-500/10 text-rose-100"
-                                : "border-emerald-400/40 bg-emerald-500/10 text-emerald-100"
-                            }`}
-                          >
-                            <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.3em]">
-                              <span className="text-white/80">Privacy check</span>
-                              <span
-                                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                                  message.violations.length > 0
-                                    ? "bg-rose-400/20 text-rose-100"
-                                    : "bg-emerald-400/20 text-emerald-100"
-                                }`}
-                              >
-                                {message.violations.length > 0
-                                  ? "Violations found"
-                                  : "No issues"}
-                              </span>
-                            </div>
+                          <div className="mt-3 text-xs">
                             {message.violations.length > 0 ? (
-                              <ul className="mt-3 space-y-2 text-sm leading-6">
-                                {message.violations.map((violation, index) => (
-                                  <li
-                                    key={`${message.id}-violation-${index}`}
-                                    className="flex items-start gap-3"
-                                  >
-                                    <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-current" />
-                                    <span className="flex-1">{violation}</span>
-                                  </li>
-                                ))}
-                              </ul>
+                              <>
+                                <p className="font-semibold uppercase tracking-[0.2em] text-rose-200">
+                                  Privacy notice
+                                </p>
+                                <ul className="mt-2 space-y-1 text-rose-100">
+                                  {message.violations.map((violation, index) => (
+                                    <li
+                                      key={`${message.id}-violation-${index}`}
+                                      className="flex items-start gap-2"
+                                    >
+                                      <span className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-current" />
+                                      <span className="flex-1">{violation}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </>
                             ) : (
-                              <p className="mt-3 text-sm leading-6 text-white">
-                                No policy violations detected.
+                              <p className="flex items-center gap-2 font-medium text-emerald-300">
+                                <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+                                Privacy check passed — no policy issues detected.
                               </p>
                             )}
                           </div>
@@ -848,16 +905,16 @@ export default function Home() {
                         onChange={(event) => setInputValue(event.target.value)}
                         placeholder={
                           isAuthenticated
-                            ? "Ask Nomadz AI anything about your next remote work trip..."
-                            : "Sign in to start planning your next adventure..."
+                            ? "Ask Nomadz AI about your sensitive data while staying compliant..."
+                            : "Draft your question—sign in to run a privacy-screened analysis..."
                         }
                         className="flex-1 bg-transparent text-sm text-white placeholder:text-white/50 focus:outline-none"
                         aria-label="Type your message"
-                        disabled={!isAuthenticated || isLoading}
+                        disabled={isLoading}
                       />
                       <button
                         type="submit"
-                        disabled={!isAuthenticated || isLoading || inputValue.trim().length === 0}
+                        disabled={isLoading || inputValue.trim().length === 0}
                         className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-tr from-sky-500 to-indigo-500 text-white shadow-lg transition hover:from-sky-400 hover:to-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-60"
                         aria-label="Send message"
                       >
@@ -878,7 +935,7 @@ export default function Home() {
                   </div>
                   {!isAuthenticated ? (
                     <p className="mt-3 text-xs text-white/60">
-                      Sign in to save your conversations to the cloud.
+                      Sign in to retain an auditable history of your secure conversations.
                     </p>
                   ) : null}
                 </form>
