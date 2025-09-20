@@ -42,7 +42,7 @@ rul = vector_store1.add_documents(rules)
 vector_store2 = InMemoryVectorStore(embeddings)
 dat = vector_store2.add_documents(data)
 
-template = """You are an AI assistant that finds possible keywords for rule violations from the query to retrieve relevant rules and regulations from the context provided. You should return a list of keywords that are relevant to the query separated by commas. If there are no relevant keywords, return an empty string.
+template = """You are an AI assistant that finds keywords from the query parts that can cause rule violations to retrieve relevant rules and regulations from another tool. You should return a list of keywords that are relevant to the query separated by commas. If there are no relevant keywords, return an empty list.
 
 Query: {query}
 Answer:"""
@@ -50,10 +50,10 @@ custom_rag_prompt = PromptTemplate.from_template(template)
 
 @tool
 def check(
-    query: Annotated[str, "the query to analyze for rule keywords"],
+    input: Annotated[str, "the query to analyze for rule keywords"],
     ) -> list[str]:
     """Analyze the query for possible rule violation keywords."""
-    messages = custom_rag_prompt.invoke({"question": query})
+    messages = custom_rag_prompt.invoke({"query": input})
     try:
         keywords = ",".split(llm.invoke(messages))
     except Exception as e:
