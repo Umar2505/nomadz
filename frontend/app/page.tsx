@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   addDoc,
   collection,
@@ -187,6 +187,8 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [chats, setChats] = useState<HistoryItem[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [pendingChatId, setPendingChatId] = useState<string | null>(null);
+  const hasInitializedActiveChat = useRef(false);
 
   useEffect(() => {
     if (!user) {
@@ -194,6 +196,8 @@ export default function Home() {
       setActiveChatId(null);
       setMessages(createDefaultMessages());
       setShowIntro(true);
+      setPendingChatId(null);
+      hasInitializedActiveChat.current = false;
       return;
     }
 
@@ -216,8 +220,9 @@ export default function Home() {
     }
 
     if (!activeChatId) {
-      if (chats.length > 0) {
+      if (!hasInitializedActiveChat.current && chats.length > 0) {
         const initialChat = chats[0];
+        hasInitializedActiveChat.current = true;
         setActiveChatId(initialChat.id);
         setMessages(
           initialChat.messages.length > 0
@@ -225,7 +230,7 @@ export default function Home() {
             : createDefaultMessages(),
         );
         setShowIntro(initialChat.messages.length === 0);
-      } else {
+      } else if (chats.length === 0) {
         setMessages(createDefaultMessages());
         setShowIntro(true);
       }
@@ -236,15 +241,30 @@ export default function Home() {
     const currentChat = chats.find((chat) => chat.id === activeChatId);
 
     if (!currentChat) {
+      if (pendingChatId === activeChatId) {
+        return;
+      }
+
+      setPendingChatId(null);
       if (chats.length > 0) {
-        setActiveChatId(chats[0].id);
+        const fallbackChat = chats[0];
+        hasInitializedActiveChat.current = true;
+        setActiveChatId(fallbackChat.id);
       } else {
         setActiveChatId(null);
         setMessages(createDefaultMessages());
         setShowIntro(true);
+        setPendingChatId(null);
+        hasInitializedActiveChat.current = false;
       }
 
       return;
+    }
+
+    hasInitializedActiveChat.current = true;
+
+    if (pendingChatId === activeChatId) {
+      setPendingChatId(null);
     }
 
     setMessages(
@@ -253,7 +273,7 @@ export default function Home() {
         : createDefaultMessages(),
     );
     setShowIntro(currentChat.messages.length === 0);
-  }, [activeChatId, chats, user]);
+  }, [activeChatId, chats, pendingChatId, user]);
 
   const handlePersistConversation = async (
     finalMessages: Message[],
@@ -299,6 +319,7 @@ export default function Home() {
           preview: previewText,
           updatedAt: serverTimestamp(),
         });
+        setPendingChatId(null);
       } else {
         const title = userInput.slice(0, 60) || "Conversation";
         const newChatRef = await addDoc(collection(userDocRef, "chats"), {
@@ -314,10 +335,12 @@ export default function Home() {
           updatedAt: serverTimestamp(),
         });
 
+        setPendingChatId(newChatRef.id);
         setActiveChatId(newChatRef.id);
       }
     } catch (error) {
       console.error("Failed to persist conversation", error);
+      setPendingChatId(null);
     }
   };
 
@@ -443,6 +466,7 @@ export default function Home() {
       return;
     }
 
+    setPendingChatId(null);
     setActiveChatId(null);
     setMessages(createDefaultMessages());
     setInputValue("");
@@ -454,6 +478,7 @@ export default function Home() {
       return;
     }
 
+    setPendingChatId(null);
     const selectedChat = chats.find((chat) => chat.id === chatId);
 
     setActiveChatId(chatId);
