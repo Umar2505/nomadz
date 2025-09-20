@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
   onSnapshot,
   orderBy,
@@ -188,6 +189,7 @@ export default function Home() {
   const [chats, setChats] = useState<HistoryItem[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [pendingChatId, setPendingChatId] = useState<string | null>(null);
+  const [deletingChatId, setDeletingChatId] = useState<string | null>(null);
   const hasInitializedActiveChat = useRef(false);
 
   useEffect(() => {
@@ -496,6 +498,47 @@ export default function Home() {
     }
   };
 
+  const handleDeleteChat = async (chatId: string) => {
+    if (!user || deletingChatId === chatId) {
+      return;
+    }
+
+    setDeletingChatId(chatId);
+
+    try {
+      await deleteDoc(doc(db, "users", user.uid, "chats", chatId));
+
+      if (pendingChatId === chatId) {
+        setPendingChatId(null);
+      }
+
+      if (activeChatId === chatId) {
+        const remainingChats = chats.filter((chat) => chat.id !== chatId);
+
+        if (remainingChats.length > 0) {
+          const fallbackChat = remainingChats[0];
+          hasInitializedActiveChat.current = true;
+          setActiveChatId(fallbackChat.id);
+          setMessages(
+            fallbackChat.messages.length > 0
+              ? fallbackChat.messages
+              : createDefaultMessages(),
+          );
+          setShowIntro(fallbackChat.messages.length === 0);
+        } else {
+          hasInitializedActiveChat.current = false;
+          setActiveChatId(null);
+          setMessages(createDefaultMessages());
+          setShowIntro(true);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to delete chat", error);
+    } finally {
+      setDeletingChatId((current) => (current === chatId ? null : current));
+    }
+  };
+
   const handleSignOut = async () => {
     try {
       await signOutUser();
@@ -562,26 +605,60 @@ export default function Home() {
             <nav className="flex-1 space-y-3 overflow-y-auto pr-2">
               {isAuthenticated ? (
                 chats.length > 0 ? (
-                  chats.map((chat) => (
-                    <button
-                      key={chat.id}
-                      type="button"
-                      onClick={() => handleSelectChat(chat.id)}
-                      className={`w-full rounded-2xl border px-4 py-4 text-left transition ${
-                        chat.id === activeChatId
-                          ? "border-white/40 bg-white/15"
-                          : "border-white/10 bg-black/30 hover:border-white/30 hover:bg-white/10"
-                      }`}
-                    >
-                      <p className="text-sm font-semibold text-white">
-                        {chat.title}
-                      </p>
-                      <p className="mt-1 text-xs text-white/60">{chat.preview}</p>
-                      <p className="mt-3 text-[11px] uppercase tracking-[0.2em] text-white/40">
-                        Updated {chat.updatedAt}
-                      </p>
-                    </button>
-                  ))
+                  chats.map((chat) => {
+                    const isActive = chat.id === activeChatId;
+                    const isDeleting = deletingChatId === chat.id;
+
+                    return (
+                      <div key={chat.id} className="relative">
+                        <button
+                          type="button"
+                          onClick={() => handleSelectChat(chat.id)}
+                          className={`w-full rounded-2xl border px-4 py-4 pr-12 text-left transition ${
+                            isActive
+                              ? "border-white/40 bg-white/15"
+                              : "border-white/10 bg-black/30 hover:border-white/30 hover:bg-white/10"
+                          } disabled:cursor-not-allowed disabled:opacity-60`}
+                          disabled={isDeleting}
+                        >
+                          <p className="text-sm font-semibold text-white">
+                            {chat.title}
+                          </p>
+                          <p className="mt-1 text-xs text-white/60">{chat.preview}</p>
+                          <p className="mt-3 text-[11px] uppercase tracking-[0.2em] text-white/40">
+                            Updated {chat.updatedAt}
+                          </p>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            void handleDeleteChat(chat.id);
+                          }}
+                          disabled={isDeleting}
+                          className="absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-black/60 text-white/60 transition hover:border-white/30 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-60"
+                          aria-label="Delete chat"
+                        >
+                          <svg
+                            aria-hidden="true"
+                            className="h-4 w-4"
+                            viewBox="0 0 20 20"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              d="M6 6l8 8m0-8l-8 8"
+                              stroke="currentColor"
+                              strokeWidth="1.6"
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                          <span className="sr-only">Delete chat</span>
+                        </button>
+                      </div>
+                    );
+                  })
                 ) : (
                   <p className="text-sm text-white/60">
                     Start a conversation to see it saved here.
